@@ -7,7 +7,9 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
 import java.sql.Timestamp;
+import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 @ConditionalOnProperty(name = "app.datasource.mercadopago.enabled", havingValue = "true")
@@ -23,6 +25,14 @@ public class PaymentRepository {
         for (com.batteryplus.sync.mercadopago_sync.core.model.MercadoPagoPayment p : payments) {
             upsert(p);
         }
+    }
+
+    public Optional<OffsetDateTime> getMaxFechaCreacion() {
+        String sql = "SELECT MAX(fecha_creacion) FROM pagos_mercadopago";
+        java.sql.Timestamp result = jdbc.queryForObject(sql, java.sql.Timestamp.class);
+        if (result == null) return Optional.empty();
+        return Optional.of(result.toLocalDateTime()
+                .atOffset(java.time.ZoneOffset.ofHours(-7)));
     }
 
     private void upsert(com.batteryplus.sync.mercadopago_sync.core.model.MercadoPagoPayment p) {
@@ -59,4 +69,6 @@ public class PaymentRepository {
     private Timestamp toTimestamp(java.time.OffsetDateTime odt) {
         return odt == null ? null : Timestamp.valueOf(odt.toLocalDateTime());
     }
+
+
 }

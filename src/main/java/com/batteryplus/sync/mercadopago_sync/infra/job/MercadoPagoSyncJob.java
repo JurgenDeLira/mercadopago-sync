@@ -37,16 +37,37 @@ public class MercadoPagoSyncJob {
     @Scheduled(fixedDelayString = "PT1H")
     public void sync() {
         OffsetDateTime to = OffsetDateTime.now();
-        OffsetDateTime from = to.minusDays(daysBack);
+        OffsetDateTime globalFrom;
 
-        // 1. Sync MercadoPago API → MercadoPagoSync
-        log.info("Iniciando sync MercadoPago: {} -> {}", from, to);
-        List<MercadoPagoPayment> payments = client.fetchPayments(from, to);
-        log.info("Pagos encontrados: {}", payments.size());
-        repository.upsertAll(payments);
-        log.info("Sync MP completado: {} pagos", payments.size());
+        if (daysBack > 3) {
+            globalFrom = to.minusDays(daysBack);
+            log.info("Recarga histórica forzada: {} días atrás desde {}", daysBack, globalFrom);
+        } else {
+            globalFrom = repository.getMaxFechaCreacion()
+                    .map(last -> last.minusHours(1))
+                    .orElse(to.minusDays(daysBack));
+        }
 
-        // 2. Sync comisiones BatteryPlus → MercadoPagoSync
+        // 1. Sync en ventanas de 7 días para evitar el bug de paginación de MP
+        int totalGuardados = 0;
+        OffsetDateTime windowStart = globalFrom;
+
+        while (windowStart.isBefore(to)) {
+            OffsetDateTime windowEnd = windowStart.plusDays(7);
+            if (windowEnd.isAfter(to)) windowEnd = to;
+
+            log.info("Sincronizando ventana: {} -> {}", windowStart, windowEnd);
+            List<MercadoPagoPayment> payments = client.fetchPayments(windowStart, windowEnd);
+            log.info("Pagos en ventana: {}", payments.size());
+            repository.upsertAll(payments);
+            totalGuardados += payments.size();
+
+            windowStart = windowEnd;
+        }
+
+        log.info("Sync MP completado: {} pagos totales", totalGuardados);
+
+        // 2. Sync comisiones
         if (comisionesRepository != null) {
             String fechaDesde = LocalDate.now().minusDays(daysBack).toString();
             String fechaHasta = LocalDate.now().toString();

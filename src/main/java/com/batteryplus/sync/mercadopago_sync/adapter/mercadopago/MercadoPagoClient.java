@@ -48,6 +48,7 @@ public class MercadoPagoClient {
             String url = BASE_URL
                     + "?begin_date=" + from.format(FMT_API)
                     + "&end_date=" + to.format(FMT_API)
+                    + "&range=date_created"
                     + "&sort=date_created&criteria=asc"
                     + "&limit=" + pageSize
                     + "&offset=" + offset;

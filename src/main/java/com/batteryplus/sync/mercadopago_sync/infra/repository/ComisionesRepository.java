@@ -44,6 +44,9 @@ public class ComisionesRepository {
             jdbcMercadoPago.update(UPSERT_SQL,
                     row.get("Ticket"),
                     row.get("IDSucursal"),
+                    // INSERT values
+                    row.get("Ticket"),
+                    row.get("IDSucursal"),
                     row.get("Sucursal"),
                     row.get("Fecha"),
                     row.get("Tipo"),
@@ -63,7 +66,7 @@ public class ComisionesRepository {
                     row.get("Transferencia"),
                     row.get("Cheque"),
                     row.get("Total_Comisiones"),
-                    // para el WHEN MATCHED
+                    // UPDATE values
                     row.get("Total_Cobrado"),
                     row.get("Efectivo"),
                     row.get("Tarjeta_Credito"),
